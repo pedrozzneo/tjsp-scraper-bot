@@ -25,7 +25,7 @@ def move_files(download_dir, classe, date, quantityOfFiles):
         most_recent_files = sorted(files, key=os.path.getctime, reverse=True)[:quantityOfFiles]
 
         # Create the directory for the current date and class if it doesn't exist
-        julgadosDir = r"G:\Meu Drive\JulgadosBackup"
+        julgadosDir = r"C:\Users\pedro\Documents\sentences"
         dateDir = os.path.join(julgadosDir, str(classe), date.split("/")[2], get_month_name(date), date.replace("/", "-"))
         if not os.path.exists(dateDir):
             os.makedirs(dateDir)

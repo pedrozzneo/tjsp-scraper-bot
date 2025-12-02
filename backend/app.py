@@ -1,15 +1,24 @@
 from datetime import datetime, timedelta
+import argparse
+import sys
 import form 
 import link
 import files
 import error 
 import driver as d
 
-result = None
-download_dir = r"G:\Meu Drive\JulgadosBackup\moveDir"
-driver = d.set(download_dir)
-
-def solve_errors(driver, download_dir):
+def solve_errors(driver, download_dir, result):
+    """
+    Try to solve errors from the error log.
+    
+    Args:
+        driver: Selenium WebDriver instance
+        download_dir: Download directory path
+        result: Previous result WebElement
+    
+    Returns:
+        tuple: (driver, result) Updated driver and result
+    """
     try:
         # Know how many errors are in the error log
         quantity = len(error.errors)
@@ -17,30 +26,39 @@ def solve_errors(driver, download_dir):
         
         # If there are no errors, just return
         if quantity == 0:
-            return
+            return driver, result
         
-        # Give it 3 times the len of error log to solve the errors
+        # Try to solve each error
         for i in range(quantity):
-            # Remove the first item to try to solve it and also recycle the error log
             classe = error.errors[i].get("classe")
             date = error.errors[i].get("date")
             
-            # Split to extract class and date
             print(f"Trying to solve: {classe} on {date}")
 
-            # Try to solve
-            scrape(classe, date, download_dir)
+            # Try to solve (no retries for error solving to avoid infinite loops)
+            driver, result = scrape(driver, classe, date, download_dir, result, retry_count=0, max_retries=1)
+        
+        return driver, result
     except:
         raise
 
-def scrape(classe, date, download_dir):
+def scrape(driver, classe, date, download_dir, result, retry_count=0, max_retries=3):
+    """
+    Scrape data for a single class and date.
+    
+    Args:
+        driver: Selenium WebDriver instance
+        classe: Class name to scrape
+        date: Date to scrape (DD/MM/YYYY)
+        download_dir: Download directory path
+        result: Previous result WebElement
+        retry_count: Current retry attempt (internal use)
+        max_retries: Maximum number of retries before giving up
+    
+    Returns:
+        tuple: (driver, result) Updated driver and result
+    """
     try:
-        # alawys keep track of this WebElement to tell wheter we have or not downloadLinks to process
-        global result
-
-        # alawys keep track of the driver because the resets (changes it) can be perpetuated across functions
-        global driver
-
         # Track the time from filling the forms to processing the results
         timeBeforeForms = datetime.now()
 
@@ -54,12 +72,14 @@ def scrape(classe, date, download_dir):
         timeAfterResult = datetime.now()
         timeTaken = timeAfterResult - timeBeforeForms
 
-        # If it took too long, reset the driver and try again untill it works out as it causes bug
+        # If it took too long, reset the driver and try again until it works out as it causes bug
         if timeTaken > timedelta(seconds=10) and classe != "Usucapião":
-            print(f"-> Forms took too long to process: {timeTaken}. Resetting driver.")
-            driver = d.reset(driver, download_dir)
-            scrape(classe, date, download_dir) 
-            return
+            if retry_count < max_retries:
+                print(f"-> Forms took too long to process: {timeTaken}. Resetting driver (attempt {retry_count + 1}/{max_retries}).")
+                driver = d.reset(driver, download_dir)
+                return scrape(driver, classe, date, download_dir, result, retry_count + 1, max_retries)
+            else:
+                print(f"-> Forms took too long ({timeTaken}), but max retries reached. Continuing anyway.")
         else:
             print(f"-> Forms processed in {timeTaken}")
         
@@ -73,54 +93,86 @@ def scrape(classe, date, download_dir):
         else:
             print("NO download links")
 
+        return driver, result
+
     except Exception as e:
         result = None
         raise
 
-def main():
-    # List all classes to be searched
-    classes = ["Ação Civil Pública", "Ação Civil de Improbidade Administrativa", "Ação Civil Coletiva", "Ação Popular", "Mandado de Segurança Coletivo", "Usucapião"]
+def main(classe, start_date_str, end_date_str, download_directory=None):
+    """
+    Main function to scrape data for a single class and date range.
     
-    print(f"classes: {classes}")
+    Args:
+        classe: Single class name to scrape
+        start_date_str: Start date in DD/MM/YYYY format
+        end_date_str: End date in DD/MM/YYYY format
+        download_directory: Optional custom download directory
+    """
+    # Use custom download directory if provided, otherwise use default
+    download_dir = download_directory if download_directory else r"C:\Users\pedro\Documents\temp"
+    
+    # Initialize driver
+    driver = d.set(download_dir)
+    
+    # Initialize result tracker
+    result = None
+    
+    print(f"classe: {classe}")
 
-    # List all dates to be searched
-    startingDate = datetime.strptime("30/09/2025", "%d/%m/%Y")
-    endDate = datetime.strptime("31/10/2025", "%d/%m/%Y")
+    # Parse dates
+    startingDate = datetime.strptime(start_date_str, "%d/%m/%Y")
+    endDate = datetime.strptime(end_date_str, "%d/%m/%Y")
     interval = (endDate - startingDate).days
-    print(f"dates: from {startingDate} to {endDate}")
+    print(f"dates: from {startingDate.strftime('%d/%m/%Y')} to {endDate.strftime('%d/%m/%Y')}")
 
-    # Set the download directory
-    download_dir = r"G:\Meu Drive\JulgadosBackup\moveDir"
-
-    # Acess the main page
-    global driver
+    # Access the main page
     driver.get("https://esaj.tjsp.jus.br/cjpg/")
 
-    # Loop through each class and date
-    for classe in classes:
-        for i in range(interval + 1):
-            try:
-                # Calculate the date for the current iteration and format it
-                date = (startingDate + timedelta(days=i)).strftime("%d/%m/%Y")
-
-                # Display the class and date being scraped
-                print(f"\n{classe.upper()} ON {date.upper()}: \n")
-
-                # Scrape the current class and date
-                scrape(classe, date, download_dir)
-                
-            except Exception:
-                # Reset everything
-                driver = d.reset(driver, download_dir)
-
-            finally:
-                # Clear the download dir and display the errors so far
-                files.clear_directory(download_dir)
-                error.display()
+    # Loop through each date
+    for i in range(interval + 1):
         try:
-            # Try to solve the errors in the error log 
-            solve_errors(driver, download_dir)
+            # Calculate the date for the current iteration and format it
+            date = (startingDate + timedelta(days=i)).strftime("%d/%m/%Y")
+
+            # Display the class and date being scraped
+            print(f"\n{classe.upper()} ON {date.upper()}: \n")
+
+            # Scrape the current class and date
+            driver, result = scrape(driver, classe, date, download_dir, result)
+            
         except Exception:
             # Reset everything
             driver = d.reset(driver, download_dir)
-main()
+            result = None
+
+        finally:
+            # Clear the download dir and display the errors so far
+            files.clear_directory(download_dir)
+            error.display()
+    
+    try:
+        # Try to solve the errors in the error log 
+        driver, result = solve_errors(driver, download_dir, result)
+    except Exception:
+        # Reset everything
+        driver = d.reset(driver, download_dir)
+    
+    # Close driver when done
+    driver.quit()
+    print("\n✅ Scraping completed!")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Web scraper for legal documents')
+    parser.add_argument('--classe', type=str, required=True, help='Class name to scrape')
+    parser.add_argument('--start-date', type=str, required=True, help='Start date (DD/MM/YYYY)')
+    parser.add_argument('--end-date', type=str, required=True, help='End date (DD/MM/YYYY)')
+    parser.add_argument('--download-dir', type=str, help='Custom download directory')
+    
+    args = parser.parse_args()
+    
+    try:
+        main(args.classe, args.start_date, args.end_date, args.download_dir)
+    except Exception as e:
+        print(f"❌ Error: {e}", file=sys.stderr)
+        sys.exit(1)

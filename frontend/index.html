@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Julgados Automation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 Julgados Automation</h1>
+            <p>Automated legal document download system</p>
+        </header>
+
+        <main>
+            <form id="scraper-form">
+                <div class="form-group">
+                    <label for="classe">Class Type</label>
+                    <select id="classe" name="classe" required>
+                        <option value="">Select a class...</option>
+                        <option value="Ação Civil Pública">Ação Civil Pública</option>
+                        <option value="Ação Civil de Improbidade Administrativa">Ação Civil de Improbidade Administrativa</option>
+                        <option value="Ação Civil Coletiva">Ação Civil Coletiva</option>
+                        <option value="Ação Popular">Ação Popular</option>
+                        <option value="Mandado de Segurança Coletivo">Mandado de Segurança Coletivo</option>
+                        <option value="Usucapião">Usucapião</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="start-date">Start Date</label>
+                        <input type="date" id="start-date" name="start-date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="end-date">End Date</label>
+                        <input type="date" id="end-date" name="end-date" required>
+                    </div>
+                </div>
+
+                <button type="submit" id="submit-btn" class="btn-primary">
+                    Start Scraping
+                </button>
+            </form>
+
+            <div id="status-section" class="status-section hidden">
+                <h2>Status</h2>
+                <div id="status-indicator" class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span id="status-text">Ready</span>
+                </div>
+                <div id="output-console" class="output-console"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Built with Electron & Python • Selenium Web Scraper</p>
+        </footer>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
+
