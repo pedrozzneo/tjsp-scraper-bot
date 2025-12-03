@@ -6,6 +6,21 @@ const statusSection = document.getElementById('status-section');
 const statusIndicator = document.getElementById('status-indicator');
 const statusText = document.getElementById('status-text');
 const outputConsole = document.getElementById('output-console');
+const classeSelect = document.getElementById('classe');
+const classeCustomInput = document.getElementById('classe-custom');
+
+// Handle custom class input visibility
+classeSelect.addEventListener('change', () => {
+    if (classeSelect.value === '__CUSTOM__') {
+        classeCustomInput.classList.remove('hidden');
+        classeCustomInput.required = true;
+        classeSelect.required = false;
+    } else {
+        classeCustomInput.classList.add('hidden');
+        classeCustomInput.required = false;
+        classeSelect.required = true;
+    }
+});
 
 // Convert date from YYYY-MM-DD to DD/MM/YYYY
 function convertDateFormat(dateString) {
@@ -36,7 +51,18 @@ form.addEventListener('submit', (e) => {
     e.preventDefault();
 
     // Get form values
-    const classe = document.getElementById('classe').value;
+    const classeSelectValue = classeSelect.value;
+    const classe = classeSelectValue === '__CUSTOM__' 
+        ? classeCustomInput.value.trim() 
+        : classeSelectValue;
+    
+    // Validate custom class if selected
+    if (classeSelectValue === '__CUSTOM__' && !classe) {
+        alert('Please enter a custom class name!');
+        classeCustomInput.focus();
+        return;
+    }
+    
     const startDate = convertDateFormat(document.getElementById('start-date').value);
     const endDate = convertDateFormat(document.getElementById('end-date').value);
     const downloadDir = 'C:\\Users\\pedro\\Documents\\temp';

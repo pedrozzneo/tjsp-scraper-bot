@@ -69,6 +69,11 @@ main {
     font-size: 1rem;
     transition: all 0.3s ease;
     font-family: inherit;
+    margin-top: 0;
+}
+
+.form-group input#classe-custom {
+    margin-top: 8px;
 }
 
 .form-group input:focus,
@@ -83,6 +88,10 @@ main {
     margin-top: 6px;
     color: #666;
     font-size: 0.85rem;
+}
+
+.hidden {
+    display: none !important;
 }
 
 .form-row {
